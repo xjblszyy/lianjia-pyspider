@@ -17,7 +17,7 @@ fake-useragent（必须）
 ## 2 创建mysql的数据库和表以及字段
 - 创建数据库
 ```
-create database lianjia charset=urf8;
+create database lianjia charset=utf8;
 ```
 
 - 创建表以及字段
@@ -69,6 +69,9 @@ http://127.0.0.0:5000
 ```
 
 ## 4 成果图片展示
+![爬取结果部分展示](https://github.com/xjblszyy/lianjia-pyspider/blob/master/result_images/01.png)
+![数据库数据展示](https://github.com/xjblszyy/lianjia-pyspider/blob/master/result_images/02.png)
+![数据库数据展示](https://github.com/xjblszyy/lianjia-pyspider/blob/master/result_images/03.png)
 
 ## 5 TODO
 ```
