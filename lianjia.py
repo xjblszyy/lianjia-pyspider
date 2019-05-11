@@ -154,6 +154,8 @@ class Handler(BaseHandler):
         return re_data
     
     def on_result(self, data):
+        if data is None:
+            return
         cnn = SQL()
         id = data["house_id"]
         images = data.pop("images")
