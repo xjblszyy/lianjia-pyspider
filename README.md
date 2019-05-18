@@ -34,9 +34,13 @@ CREATE TABLE `home_house` (
   `house_address` varchar(255) DEFAULT NULL,
   `house_man_name` varchar(255) DEFAULT NULL,
   `house_man_number` varchar(255) DEFAULT NULL,
+  `house_province` varchar(255) DEFAULT NULL,
+  `house_city` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`house_id`),
-  KEY `house_id` (`house_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  KEY `house_id` (`house_id`),
+  KEY `house_provice` (`house_province`),
+  KEY `house_city` (`house_city`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 |
 
 ```
 ```

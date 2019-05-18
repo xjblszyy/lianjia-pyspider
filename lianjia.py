@@ -31,15 +31,15 @@ class SQL():
         if not hasattr(cls, 'instance'):
             cls.instance = super(SQL, cls).__new__(cls)
         return cls.instance
-    
-    #数据库初始化
+
+    # 数据库初始化
     def __init__(self):
-        #数据库连接相关信息
-        self.hosts = '47.106.253.107'  
-        self.username = 'root'
-        self.password = '123456'
-        self.database = 'lianjia'
-        self.port = 8001
+        # 数据库连接相关信息
+        self.hosts = ''
+        self.username = ''
+        self.password = ''
+        self.database = ''
+        self.port = 3306
         self.connection = False
         try:
             self.conn = pymysql.connect(host=self.hosts,user=self.username,passwd=self.password,db= self.database,port=self.port,charset='utf8')
@@ -50,17 +50,17 @@ class SQL():
 
     def escape(self,string):
         return '%s' % string
-    
-    #插入数据到数据库   
+
+    #插入数据到数据库
     def insert(self, tablename=None, pk=None, **values):
 
-        if self.connection: 
-            tablename = self.escape(tablename)  
+        if self.connection:
+            tablename = self.escape(tablename)
             _keys = ",".join(self.escape(k) for k in values)
             _values = ",".join(['%s',]*len(values))
             sql_query = "INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE house_id= (%s)" % (tablename,_keys,_values, pk)
             try:
-                self.cursor.execute(sql_query,list(itervalues(values)))      
+                self.cursor.execute(sql_query,list(itervalues(values)))
                 self.conn.commit()
                 return True
             except Exception as e:
@@ -69,7 +69,7 @@ class SQL():
 
 
 class Handler(BaseHandler):
-    
+
     # ua = UserAgent(cache=False, verify_ssl=False, use_cache_server=False)
     headers = {
         "User-Agent": get_header,
@@ -93,14 +93,14 @@ class Handler(BaseHandler):
             url = each.attr.href
             print("{0} {1}:{2}".format(province, each.text(), url))
             self.crawl(url+"ershoufang/", callback=self.city_page, save={"province": province, "city": each.text()})
-            
+
     @config(priority=2)
     def city_page(self, response):  # 进入城市房子信息，爬取区域信息
         content = response.doc('.position a[href^="http"]').items()  # 这是一个生成器，用islice做切片功能，去除第一个a链接，第一条是所有区域的房子，可以切片过滤这条内容
-        for each in islice(content, 0, None):  
+        for each in islice(content, 0, None):
             print("{0}:{1}".format(each.text(), each.attr.href))
             self.crawl(each.attr.href, callback=self.area_page, save=response.save)
-    
+
     @config(priority=3)
     def area_page(self, response):  # 选择区域后进去房子列表
         total_count = response.doc('.total span').text()  # 搜索到的房子的总计数量,分页是每页30条数据
@@ -110,7 +110,7 @@ class Handler(BaseHandler):
         for pg in range(page):
             url = response.url + "pg{}/".format(pg+1)  # 每页的url
             self.crawl(url, callback=self.pagination_page, save=response.save)
-        
+
     @config(priority=4)
     def pagination_page(self, response):  # 每页的信息
         content = response.doc('.title a[href^="http"]').items()
@@ -118,7 +118,7 @@ class Handler(BaseHandler):
             # print(each.attr.href)  # 房子的链接地址
             id = each.attr.href.split("/")[-1].split(".")[0]  # 房子的唯一id
             self.crawl(each.attr.href, callback=self.info_page, save=response.save)
-            
+
     @config(priority=5)
     def info_page(self, response):  # 房子的详细信息
         re_data = {}
@@ -138,9 +138,9 @@ class Handler(BaseHandler):
         house_man_numbers = re.findall('\d+', number)
         house_man_number = 0
         for i in house_man_numbers:
-            if i.startswith("400"):   
+            if i.startswith("400"):
                 house_man_number = i
-                
+
         # 图片
         images_list = []
         images = response.doc('.smallpic li').items()
@@ -162,21 +162,21 @@ class Handler(BaseHandler):
         re_data["house_province"] = response.save.get("province", "")
         re_data["house_city"] = response.save.get("city", "")
         return re_data
-    
+
     def on_result(self, data):
         if data is None:
-            return 
+            return
         cnn = SQL()
         id = data["house_id"]
         images = data.pop("images")
         print(data)
         # 保存房屋信息
         cnn.insert("home_house", id, **data)
-        
+
         # 保存图片
         for i in images:
             image_data = {}
             image_data["pic"] = i
             image_data["house_id"] = id
             cnn.insert("home_picture", id, **image_data)
-    
+
