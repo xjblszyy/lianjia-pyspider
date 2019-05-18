@@ -6,6 +6,7 @@
 
 from itertools import islice
 import re
+import os
 from six import itervalues
 
 from pyspider.libs.base_handler import *
@@ -16,6 +17,12 @@ from fake_useragent import UserAgent
 # 设置代理
 def get_proxy():
     return requests.get('http://localhost:5010/get/').text
+
+# 解决ua出错问题
+def get_header():
+    location = os.getcwd() + '/fake_useragent.json'
+    ua = UserAgent(path=location)
+    return ua.random
 
 # mysql 连接实例对象
 class SQL():
@@ -28,11 +35,11 @@ class SQL():
     #数据库初始化
     def __init__(self):
         #数据库连接相关信息
-        self.hosts = '127.0.0.1'  
+        self.hosts = '47.106.253.107'  
         self.username = 'root'
         self.password = '123456'
         self.database = 'lianjia'
-        self.port = 3306
+        self.port = 8001
         self.connection = False
         try:
             self.conn = pymysql.connect(host=self.hosts,user=self.username,passwd=self.password,db= self.database,port=self.port,charset='utf8')
@@ -63,9 +70,9 @@ class SQL():
 
 class Handler(BaseHandler):
     
-    ua = UserAgent()
+    # ua = UserAgent(cache=False, verify_ssl=False, use_cache_server=False)
     headers = {
-        "User-Agent": ua.random,
+        "User-Agent": get_header,
         "Host": "www.lianjia.com",
         "Referer": "https://www.lianjia.com/city/",
     }
@@ -82,16 +89,17 @@ class Handler(BaseHandler):
     @config(age=10 * 24 * 60 * 60)
     def index_page(self, response):  # 获取城市列表
         for each in response.doc('.city_list a[href^="http"]').items():
+            province = each.parent().parent().parent('.city_province .city_list_tit').text()
             url = each.attr.href
-            print("{0}:{1}".format(each.text(), url))
-            self.crawl(url+"ershoufang/", callback=self.city_page)
-
+            print("{0} {1}:{2}".format(province, each.text(), url))
+            self.crawl(url+"ershoufang/", callback=self.city_page, save={"province": province, "city": each.text()})
+            
     @config(priority=2)
     def city_page(self, response):  # 进入城市房子信息，爬取区域信息
         content = response.doc('.position a[href^="http"]').items()  # 这是一个生成器，用islice做切片功能，去除第一个a链接，第一条是所有区域的房子，可以切片过滤这条内容
         for each in islice(content, 0, None):  
             print("{0}:{1}".format(each.text(), each.attr.href))
-            self.crawl(each.attr.href, callback=self.area_page)
+            self.crawl(each.attr.href, callback=self.area_page, save=response.save)
     
     @config(priority=3)
     def area_page(self, response):  # 选择区域后进去房子列表
@@ -101,7 +109,7 @@ class Handler(BaseHandler):
             page = 100
         for pg in range(page):
             url = response.url + "pg{}/".format(pg+1)  # 每页的url
-            self.crawl(url, callback=self.pagination_page)
+            self.crawl(url, callback=self.pagination_page, save=response.save)
         
     @config(priority=4)
     def pagination_page(self, response):  # 每页的信息
@@ -109,9 +117,9 @@ class Handler(BaseHandler):
         for each in content:
             # print(each.attr.href)  # 房子的链接地址
             id = each.attr.href.split("/")[-1].split(".")[0]  # 房子的唯一id
-            self.crawl(each.attr.href, callback=self.info_page)
+            self.crawl(each.attr.href, callback=self.info_page, save=response.save)
             
-    @config(priority=4)
+    @config(priority=5)
     def info_page(self, response):  # 房子的详细信息
         re_data = {}
         # 数据
@@ -151,14 +159,17 @@ class Handler(BaseHandler):
         re_data["house_man_name"] = house_man_name
         re_data["house_man_number"] = house_man_number
         re_data["images"] = images_list
+        re_data["house_province"] = response.save.get("province", "")
+        re_data["house_city"] = response.save.get("city", "")
         return re_data
     
     def on_result(self, data):
         if data is None:
-            return
+            return 
         cnn = SQL()
         id = data["house_id"]
         images = data.pop("images")
+        print(data)
         # 保存房屋信息
         cnn.insert("home_house", id, **data)
         
@@ -168,4 +179,4 @@ class Handler(BaseHandler):
             image_data["pic"] = i
             image_data["house_id"] = id
             cnn.insert("home_picture", id, **image_data)
-            
+    
