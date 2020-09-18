@@ -40,9 +40,9 @@ class SQL:
     def __init__(self):
         # 数据库连接相关信息
         self.hosts = ''
-        self.username = ''
+        self.username = 'root'
         self.password = ''
-        self.database = ''
+        self.database = 'lianjia'
         self.port = 3306
         self.connection = False
         try:
@@ -90,7 +90,7 @@ class Handler(BaseHandler):
 
     @every(minutes=24 * 60)
     def on_start(self):  # 开始爬取的城市地址
-        self.crawl('https://www.lianjia.com/city/', callback=self.index_page)
+        self.crawl('https://www.lianjia.com/city/', callback=self.index_page, validate_cert=False)
 
     @config(age=10 * 24 * 60 * 60)
     def index_page(self, response):  # 获取城市列表
