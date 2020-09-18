@@ -7,6 +7,8 @@
 from itertools import islice
 import re
 import os
+
+import requests
 from six import itervalues
 
 from pyspider.libs.base_handler import *
@@ -18,16 +20,18 @@ from fake_useragent import UserAgent
 def get_proxy():
     return requests.get('http://localhost:5010/get/').text
 
+
 # 解决ua出错问题
 def get_header():
     location = os.getcwd() + '/fake_useragent.json'
     ua = UserAgent(path=location)
     return ua.random
 
+
 # mysql 连接实例对象
-class SQL():
+class SQL:
     def __new__(cls):
-    # 返回同一个instance对象
+        # 返回同一个instance对象
         if not hasattr(cls, 'instance'):
             cls.instance = super(SQL, cls).__new__(cls)
         return cls.instance
@@ -42,25 +46,27 @@ class SQL():
         self.port = 3306
         self.connection = False
         try:
-            self.conn = pymysql.connect(host=self.hosts,user=self.username,passwd=self.password,db= self.database,port=self.port,charset='utf8')
+            self.conn = pymysql.connect(host=self.hosts, user=self.username, passwd=self.password, db=self.database,
+                                        port=self.port, charset='utf8')
             self.cursor = self.conn.cursor()
             self.connection = True
         except Exception as e:
             print("Cannot Connect To Mysql!/n", e)
 
-    def escape(self,string):
+    def escape(self, string):
         return '%s' % string
 
-    #插入数据到数据库
-    def insert(self, tablename=None, pk=None, **values):
+    # 插入数据到数据库
+    def insert(self, table_name=None, pk=None, **values):
 
         if self.connection:
-            tablename = self.escape(tablename)
+            tablename = self.escape(table_name)
             _keys = ",".join(self.escape(k) for k in values)
-            _values = ",".join(['%s',]*len(values))
-            sql_query = "INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE house_id= (%s)" % (tablename,_keys,_values, pk)
+            _values = ",".join(['%s', ] * len(values))
+            sql_query = "INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE house_id= (%s)" % (
+            tablename, _keys, _values, pk)
             try:
-                self.cursor.execute(sql_query,list(itervalues(values)))
+                self.cursor.execute(sql_query, list(itervalues(values)))
                 self.conn.commit()
                 return True
             except Exception as e:
@@ -175,8 +181,5 @@ class Handler(BaseHandler):
 
         # 保存图片
         for i in images:
-            image_data = {}
-            image_data["pic"] = i
-            image_data["house_id"] = id
+            image_data = {"pic": i, "house_id": id}
             cnn.insert("home_picture", id, **image_data)
-
